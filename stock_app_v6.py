@@ -2,11 +2,12 @@ import yfinance as yf
 import pandas as pd
 import random
 import time
+from flask import Flask
+import threading
+
+app = Flask(__name__)
 
 def save_recommendation(ticker, current_price, buy_price, sell_price, stop_loss):
-    """
-    Saves the recommended stock and its details to a CSV file.
-    """
     data = {
         "Ticker": [ticker],
         "Current Price": [current_price],
@@ -23,9 +24,6 @@ def save_recommendation(ticker, current_price, buy_price, sell_price, stop_loss)
         print(f"Error saving recommendation: {e}")
 
 def track_stock_performance(ticker, buy_price, sell_price, stop_loss):
-    """
-    Monitors the stock to check if it hits the sell or stop-loss price.
-    """
     print(f"Tracking {ticker}...")
     stock = yf.Ticker(ticker)
     while True:
@@ -36,7 +34,7 @@ def track_stock_performance(ticker, buy_price, sell_price, stop_loss):
                 break
 
             current_price = data["Close"].iloc[-1]
-            sma_5 = data["Close"].rolling(window=5).mean().iloc[-1]  # 5-day Simple Moving Average
+            sma_5 = data["Close"].rolling(window=5).mean().iloc[-1]
             volume = data["Volume"].iloc[-1]
 
             print(f"{ticker} current price: ${current_price:.2f}, Volume: {volume}, 5-day SMA: ${sma_5:.2f}")
@@ -53,14 +51,10 @@ def track_stock_performance(ticker, buy_price, sell_price, stop_loss):
             print(f"Error tracking {ticker}: {e}")
             break
 
-        time.sleep(60)  # Check every minute
+        time.sleep(60)
 
 def fetch_random_stock_under_5(profit_target=10, stop_loss_percent=10):
-    """
-    Dynamically scans the market for stocks under $5 and recommends a random one.
-    """
     print(f"Scanning the market for a random stock under $5 with a {profit_target}% profit target...\n")
-
     try:
         nasdaq_url = "https://datahub.io/core/nasdaq-listings/r/nasdaq-listed-symbols.csv"
         tickers = pd.read_csv(nasdaq_url)["Symbol"].tolist()
@@ -102,5 +96,13 @@ def fetch_random_stock_under_5(profit_target=10, stop_loss_percent=10):
 
     print("No stocks under $5 found.")
 
-if __name__ == "__main__":
+def run_stock_app():
     fetch_random_stock_under_5(profit_target=10, stop_loss_percent=10)
+
+@app.route('/')
+def home():
+    return "Stock-Smart App is running!"
+
+if __name__ == "__main__":
+    threading.Thread(target=run_stock_app).start()
+    app.run(host="0.0.0.0", port=5000)
